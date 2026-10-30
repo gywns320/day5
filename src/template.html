@@ -93,6 +93,16 @@
   dd { margin:0; word-break:break-word; }
   .dbody h3 { font-size:14px; margin:16px 0 6px; color:var(--accent); }
   .dbody p { margin:0; white-space:pre-wrap; }
+  .banner { margin:12px 24px 0; padding:10px 14px; border:1px solid #e0a800; background:#fff6d6; color:#5c4500; border-radius:8px; font-size:14px; display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; }
+  @media (prefers-color-scheme: dark) { .banner { background:#3a3000; color:#ffe9a0; border-color:#8a6d00; } }
+  .banner strong { background:#e0a800; color:#1d2330; border-radius:10px; padding:1px 10px; }
+  .banner small { flex-basis:100%; opacity:.8; word-break:break-all; }
+  .mini.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .course .tools { display:flex; flex-wrap:wrap; gap:6px; }
+  .course a.mini { text-decoration:none; display:inline-block; }
+  .clamp { max-height:9.5em; overflow:hidden; -webkit-mask-image:linear-gradient(#000 70%, transparent); mask-image:linear-gradient(#000 70%, transparent); }
+  .toggle { margin-top:4px; }
+  @media (max-width:600px) { .banner { margin-left:12px; margin-right:12px; } }
   @media (max-width:600px) { .top, .bar { padding-left:12px; padding-right:12px; } .mapwrap, .course, section.era, .note, .tablewrap { margin-left:12px; margin-right:12px; } #map { height:320px; } }
 </style>
 </head>
@@ -106,8 +116,11 @@
 <div class="bar">
   <div class="eras" id="eras"></div>
   <input id="q" type="search">
+  <button class="mini" id="favOnly"></button>
   <div class="views"><button class="mini" data-v="cards" id="vcards"></button><button class="mini" data-v="table" id="vtable"></button></div>
 </div>
+
+<div class="banner" id="banner" hidden></div>
 
 <div class="mapwrap">
   <div id="map"><div class="mapfail" id="mapfail" hidden></div></div>
@@ -130,6 +143,7 @@
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="data.js"></script>
 <script src="eras.js"></script>
 <script src="i18n.js"></script>
 <script>
@@ -166,7 +180,7 @@ function prepare(items) {
 const byId = id => DATA.find(r => r.id === id);
 const searchText = r => [r.name, nm(r), r.addr, r.title, r.subject, r.content, r.basis, basisOf(r)].join(' ').toLowerCase();
 
-const state = { era:'all', q:'', more:0, view:'cards', sort:'id', dir:1, status:'loading', err:'' };
+const state = { era:'all', q:'', more:0, view:'cards', sort:'id', dir:1, status:'loading', err:'', practice:false, favOnly:false };
 const eraOrder = Object.fromEntries(ERAS.map((e, i) => [e.key, i]));
 const ETC_STEP = 12;
 
@@ -181,6 +195,37 @@ function toggleFav(id) {
   favs = isFav(id) ? favs.filter(x => x !== id) : [...favs, id];
   saveFavs(); renderCourse();
   document.querySelectorAll('[data-favbtn]').forEach(b => setFavBtn(b, +b.dataset.favbtn));
+  $('favOnly').textContent = `♥ ${t('favOnly')} (${favs.length})`;
+  if (state.favOnly) { refit = false; render(); }
+}
+
+// 찜 순서를 가까운 곳부터 이어지도록 다시 정렬 (첫 장소는 그대로 두고 가장 가까운 곳을 차례로 고름)
+function optimizeRoute() {
+  if (favs.length < 3) return;
+  const left = favs.slice(1).map(byId), out = [byId(favs[0])];
+  while (left.length) {
+    const last = out[out.length - 1];
+    let bi = 0;
+    left.forEach((r, i) => { if (km(last, r) < km(last, left[bi])) bi = i; });
+    out.push(left.splice(bi, 1)[0]);
+  }
+  favs = out.map(r => r.id); saveFavs(); renderCourse();
+}
+const routeKm = ids => ids.map(byId).reduce((s, r, i, a) => i ? s + km(a[i-1], r) : 0, 0);
+function directionsUrl() {
+  const rs = favs.slice(0, 11).map(byId), ll = r => `${r.lat},${r.lng}`;
+  let u = `https://www.google.com/maps/dir/?api=1&origin=${ll(rs[0])}&destination=${ll(rs[rs.length - 1])}&travelmode=driving`;
+  if (rs.length > 2) u += '&waypoints=' + rs.slice(1, -1).map(ll).join('%7C');
+  return u;
+}
+const shareUrl = () => `${location.origin === 'null' ? location.href.split('#')[0] : location.origin + location.pathname}#route=${favs.join(',')}`;
+// 공유 링크(#route=1,2,3)로 들어오면 그 코스를 불러옵니다.
+function loadSharedRoute() {
+  const m = location.hash.match(/^#route=([\d,]+)$/);
+  if (!m) return;
+  const ids = [...new Set(m[1].split(',').map(Number))].filter(id => DATA.some(r => r.id === id));
+  if (ids.length) { favs = ids; saveFavs(); }
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
 }
 function km(a, b) {
   const R = 6371, rad = Math.PI / 180, dLat = (b.lat-a.lat)*rad, dLng = (b.lng-a.lng)*rad;
@@ -193,7 +238,8 @@ function renderCourse() {
   const legs = rs.map((r, i) => i ? km(rs[i-1], r) : 0);
   const total = legs.reduce((a, b) => a + b, 0);
   $('course').innerHTML = `<div class="ch"><h2>${t('course')} (${t('courseCount', { n:rs.length })})</h2>` +
-    (rs.length ? `<span class="sum">${t('sum', { km:total.toFixed(1) })}</span><button class="mini" id="cfit">${t('fit')}</button><button class="mini" id="cclear">${t('clear')}</button>` : '') + '</div>' +
+    (rs.length ? `<span class="sum">${t('sum', { km:total.toFixed(1) })}</span>` : '') + '</div>' +
+    (rs.length ? `<div class="tools"><button class="mini" id="cfit">${t('fit')}</button>${rs.length > 2 ? `<button class="mini" id="copt">${t('optimize')}</button>` : ''}${rs.length > 1 ? `<a class="mini" id="cdir" href="${directionsUrl()}" target="_blank" rel="noopener">${t('directions')}</a>` : ''}<button class="mini" id="cshare">${t('share')}</button><button class="mini" id="cclear">${t('clear')}</button></div>` : '') +
     (rs.length ? '<ol>' + rs.map((r, i) => `<li><span class="n">${i+1}</span><span class="nm" data-id="${r.id}">${esc(nm(r))} <span class="leg">${esc(eraName(eraBy[r.era]))}${i ? ` · ${t('fromPrev', { km:legs[i].toFixed(1) })}` : ''}</span></span><button class="mini" data-m="${i}:-1" ${i?'':'disabled'}>▲</button><button class="mini" data-m="${i}:1" ${i<rs.length-1?'':'disabled'}>▼</button><button class="mini" data-m="${i}:x">✕</button></li>`).join('') + '</ol>'
       : `<p class="hint">${t('hint')}</p>`);
   if (!map) return;
@@ -205,6 +251,8 @@ $('course').onclick = e => {
   const m = e.target.closest('[data-m]');
   if (m) { const [i, d] = m.dataset.m.split(':'); if (d === 'x') toggleFav(favs[+i]); else { const j = +i + +d; if (j >= 0 && j < favs.length) { [favs[+i], favs[j]] = [favs[j], favs[+i]]; saveFavs(); renderCourse(); } } return; }
   if (e.target.id === 'cclear') { favs = []; saveFavs(); renderCourse(); document.querySelectorAll('[data-favbtn]').forEach(b => setFavBtn(b, +b.dataset.favbtn)); return; }
+  if (e.target.id === 'copt') { optimizeRoute(); return; }
+  if (e.target.id === 'cshare') { const b = e.target; copyText(shareUrl()).then(ok => { b.textContent = ok ? t('copied') : shareUrl(); }); return; }
   if (e.target.id === 'cfit' && map) { map.fitBounds(L.latLngBounds(favs.map(id => [byId(id).lat, byId(id).lng])).pad(0.15), { maxZoom:14 }); return; }
   const n = e.target.closest('.nm'); if (n) detail(byId(+n.dataset.id));
 };
@@ -257,7 +305,7 @@ function focusOnMap(id) {
 // ---------- 목록 ----------
 function visible() {
   const q = state.q.trim().toLowerCase();
-  return DATA.filter(r => (state.era === 'all' || r.era === state.era) && (!q || searchText(r).includes(q)));
+  return DATA.filter(r => (state.era === 'all' || r.era === state.era) && (!state.favOnly || isFav(r.id)) && (!q || searchText(r).includes(q)));
 }
 function cardHtml(r) {
   const e = eraBy[r.era], b = basisOf(r);
@@ -319,7 +367,12 @@ function detail(r) {
   let h = `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`;
   const full = [r.content, r.abs].filter(x => !blank(x)).join('\n\n');
   if (lang !== 'ko') h = `<div class="origbox"><span>${t('origNote')}</span><button class="mini" id="gtbtn">${t('translate')}</button></div>` + h;
-  [['content', r.content], ['toc', r.toc], ['abs', r.abs], ['bib', r.ref]].forEach(([k, v]) => { if (!blank(v)) h += `<h3>${t(k)}${lang !== 'ko' ? ` (${t('srcLabel')})` : ''}</h3><p>${esc(v)}</p>`; });
+  // 긴 본문은 처음엔 접어 두고 '더 보기'로 펼칩니다.
+  [['content', r.content], ['toc', r.toc], ['abs', r.abs], ['bib', r.ref]].forEach(([k, v]) => {
+    if (blank(v)) return;
+    const long = v.length > 500;
+    h += `<h3>${t(k)}${lang !== 'ko' ? ` (${t('srcLabel')})` : ''}</h3><p${long ? ' class="clamp"' : ''}>${esc(v)}</p>${long ? `<button class="mini toggle">${t('expand')}</button>` : ''}`;
+  });
   h += `<h3>${t('link')}</h3><p><a href="${esc(r.url)}" target="_blank" rel="noopener">${t('linkSrc')}</a> · <a href="https://www.google.com/maps?q=${r.lat},${r.lng}" target="_blank" rel="noopener">${t('linkMap')}</a></p>`;
   $('dtitle').textContent = nm(r);
   $('dsub').textContent = lang === 'ko' ? eraName(e) : `${eraName(e)} · ${r.name}`;
@@ -345,6 +398,9 @@ function applyLang() {
     const n = e.key === 'all' ? DATA.length : DATA.filter(r => r.era === e.key).length;
     return `<button class="era-btn" data-k="${e.key}" style="--c:${e.color}">${e.key === 'all' ? t('all') : esc(eraName(e))} ${n}</button>`;
   }).join('');
+  $('favOnly').textContent = `♥ ${t('favOnly')} (${favs.length})`; $('favOnly').classList.toggle('on', state.favOnly);
+  $('banner').hidden = !state.practice;
+  if (state.practice) $('banner').innerHTML = `<strong>${t('practiceTitle')}</strong><span>${t('practiceMsg')}</span><button class="mini" id="bretry">${t('reload')}</button><small>${esc(state.err)}</small>`;
   $('legend').innerHTML = ERAS.map(e => `<span><i style="background:${e.color}"></i>${esc(eraName(e))}</span>`).join('') + `<span><i style="background:#d6335a"></i>${t('legendCourse')}</span>`;
   setLayerControl();
   render(); renderCourse();
@@ -366,6 +422,12 @@ $('main').onclick = e => {
   const m = e.target.closest('[data-map]'); if (m) focusOnMap(+m.dataset.map);
 };
 document.querySelector('.views').onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; state.view = b.dataset.v; refit = false; render(); };
+$('dbody').addEventListener('click', e => {
+  const b = e.target.closest('.toggle'); if (!b) return;
+  const p = b.previousElementSibling; p.classList.toggle('clamp');
+  b.textContent = p.classList.contains('clamp') ? t('expand') : t('collapse');
+});
+$('favOnly').onclick = () => { state.favOnly = !state.favOnly; state.more = 0; refit = true; $('favOnly').classList.toggle('on', state.favOnly); render(); };
 $('dclose').onclick = () => $('dlg').close();
 $('dlg').addEventListener('click', e => { if (e.target === $('dlg')) $('dlg').close(); });
 async function boot() {
@@ -374,15 +436,20 @@ async function boot() {
     const res = await fetch(API_URL, { headers:{ Accept:'application/json' } });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.error === 'missing_env' ? `missing_env: ${(body.missing || []).join(', ')}` : `${res.status} ${body.error || ''} ${body.detail || ''}`.trim());
-    DATA = prepare(body.items || []);
-    favs = favs.filter(id => DATA.some(r => r.id === id));
-    refit = true; state.status = 'ready';
+    if (!Array.isArray(body.items) || !body.items.length) throw new Error('empty response');
+    DATA = prepare(body.items);
+    state.practice = false;
   } catch (e) {
-    state.status = 'error'; state.err = e.message;
+    // API를 쓸 수 없으면 1단계의 파일 데이터로 대신 보여 주고 '연습 모드'로 표시합니다.
+    DATA = prepare(FALLBACK_DATA.map(r => ({ ...r })));
+    state.practice = true; state.err = e.message;
   }
+  loadSharedRoute();
+  favs = favs.filter(id => DATA.some(r => r.id === id));
+  refit = true; state.status = 'ready';
   applyLang();
 }
-$('main').addEventListener('click', e => { if (e.target.id === 'retry') boot(); });
+$('banner').addEventListener('click', e => { if (e.target.id === 'bretry') boot(); });
 boot();
 </script>
 </body>

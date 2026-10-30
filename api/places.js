@@ -2,9 +2,14 @@
 // 인증키는 서버에서만 사용하므로 브라우저(index.html)에는 노출되지 않습니다.
 //
 // 필요한 환경변수 (Vercel > Project > Settings > Environment Variables)
-//   JEJU_API_KEY           공공데이터포털 인증키
-//   JEJU_GENERAL_API_URL   제주역사문화일반정보 API 주소 (예: https://api.odcloud.kr/api/15109587/v1/uddi:...)
-//   JEJU_LOCATION_API_URL  제주역사문화위치정보 API 주소 (예: https://api.odcloud.kr/api/15109570/v1/uddi:...)
+//   JEJU_CULTURE_INFO_KEY      제주역사문화일반정보 API 인증키
+//   JEJU_CULTURE_LOCATION_KEY  제주역사문화위치정보 API 인증키
+// 인증키는 코드에 넣지 않고 위 환경변수에서만 읽습니다.
+
+// API 주소는 공개 정보(공공데이터포털 API 명세)라서 코드에 둡니다.
+// 로컬 시험용 모의 API를 쓸 때만 JEJU_CULTURE_INFO_URL / JEJU_CULTURE_LOCATION_URL 로 바꿔 끼울 수 있습니다.
+const DEFAULT_INFO_URL = 'https://api.odcloud.kr/api/15109587/v1/uddi:56c2b3a4-4b4b-46cd-a1fa-f928ef731ffb';
+const DEFAULT_LOCATION_URL = 'https://api.odcloud.kr/api/15109570/v1/uddi:8781448b-81a8-487c-bc95-d26335bafa82';
 
 const PER_PAGE = 500;
 const MAX_PAGES = 20;
@@ -43,11 +48,11 @@ function withKey(baseUrl, key, page) {
   return u.origin + u.pathname + q;
 }
 
-async function fetchAll(baseUrl, key) {
+async function fetchAll(label, baseUrl, key) {
   const rows = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
     const res = await fetch(withKey(baseUrl, key, page), { headers: { Accept: 'application/json' } });
-    if (!res.ok) throw new Error(`upstream ${res.status}`);
+    if (!res.ok) throw new Error(`${label} API ${res.status}`);
     const body = await res.json();
     const data = Array.isArray(body.data) ? body.data : [];
     rows.push(...data);
@@ -83,15 +88,18 @@ module.exports = async function handler(req, res) {
     res.end(JSON.stringify(body));
   };
 
-  const { JEJU_API_KEY, JEJU_GENERAL_API_URL, JEJU_LOCATION_API_URL } = process.env;
-  const missing = Object.entries({ JEJU_API_KEY, JEJU_GENERAL_API_URL, JEJU_LOCATION_API_URL })
-    .filter(([, v]) => !v).map(([k]) => k);
+  const { JEJU_CULTURE_INFO_KEY, JEJU_CULTURE_LOCATION_KEY } = process.env;
+  const missing = Object.entries({ JEJU_CULTURE_INFO_KEY, JEJU_CULTURE_LOCATION_KEY })
+    .filter(([, v]) => !v || !v.trim()).map(([k]) => k);
   if (missing.length) return send(500, { error: 'missing_env', missing }, { 'Cache-Control': 'no-store' });
+
+  const infoUrl = process.env.JEJU_CULTURE_INFO_URL || DEFAULT_INFO_URL;
+  const locationUrl = process.env.JEJU_CULTURE_LOCATION_URL || DEFAULT_LOCATION_URL;
 
   try {
     const [locationRows, generalRows] = await Promise.all([
-      fetchAll(JEJU_LOCATION_API_URL, JEJU_API_KEY),
-      fetchAll(JEJU_GENERAL_API_URL, JEJU_API_KEY),
+      fetchAll('location', locationUrl, JEJU_CULTURE_LOCATION_KEY.trim()),
+      fetchAll('info', infoUrl, JEJU_CULTURE_INFO_KEY.trim()),
     ]);
     const items = merge(locationRows, generalRows);
     if (!items.length) return send(502, { error: 'empty', detail: 'API에서 받은 장소가 없습니다. 주소와 인증키를 확인하세요.' }, { 'Cache-Control': 'no-store' });

@@ -31,6 +31,8 @@ const UI = {
     mapLayerStreet:'일반 지도', mapLayerSat:'위성 사진',
     srcLabel:'한국어 원문', origNote:'', translate:'',
     loading:'데이터를 불러오는 중입니다…', loadError:'데이터를 불러오지 못했습니다. API 설정(인증키·주소)과 서버 실행 상태를 확인해 주세요. index.html을 파일로 직접 열면 API를 호출할 수 없습니다.', retry:'다시 시도',
+    practiceTitle:'연습 모드', practiceMsg:'API에 연결하지 못해 내장된 1단계 파일 데이터(2022-12-09 기준)를 보여 주고 있습니다.', reload:'API 다시 불러오기',
+    favOnly:'찜한 곳만', optimize:'가까운 순으로 정렬', directions:'구글 지도 길찾기', share:'코스 링크 복사', copied:'복사됨 ✓', expand:'더 보기', collapse:'접기',
     viewCards:'카드', viewTable:'표', colName:'장소명', colEra:'시대', colAddr:'주소', colTitle:'관련 자료', countOf:'전체 {all}곳 중 {n}곳',
   },
   en: {
@@ -56,6 +58,8 @@ const UI = {
     mapLayerStreet:'Map', mapLayerSat:'Satellite',
     srcLabel:'Original (Korean)', origNote:'The detailed text below is the original Korean. Use the button to open it in Google Translate.', translate:'Translate with Google Translate',
     loading:'Loading data…', loadError:'Could not load the data. Check the API settings (key and URLs) and that the server is running. Opening index.html directly as a file cannot call the API.', retry:'Retry',
+    practiceTitle:'Practice mode', practiceMsg:'Could not reach the API, so the built-in stage-1 file data (as of 2022-12-09) is shown instead.', reload:'Reload from API',
+    favOnly:'Saved only', optimize:'Sort by nearest', directions:'Google Maps directions', share:'Copy route link', copied:'Copied ✓', expand:'Show more', collapse:'Show less',
     viewCards:'Cards', viewTable:'Table', colName:'Place', colEra:'Era', colAddr:'Address', colTitle:'Related document', countOf:'{n} of {all} sites',
   },
   zh: {
@@ -81,6 +85,8 @@ const UI = {
     mapLayerStreet:'地图', mapLayerSat:'卫星',
     srcLabel:'韩文原文', origNote:'以下详细内容为韩文原文，可点击按钮用谷歌翻译打开。', translate:'用谷歌翻译打开',
     loading:'正在加载数据…', loadError:'无法加载数据。请检查 API 设置（密钥和地址）以及服务器是否运行。直接以文件方式打开 index.html 无法调用 API。', retry:'重试',
+    practiceTitle:'练习模式', practiceMsg:'无法连接 API，当前显示的是内置的第一阶段文件数据（截至 2022-12-09）。', reload:'重新从 API 加载',
+    favOnly:'仅看收藏', optimize:'按最近顺序排序', directions:'谷歌地图路线', share:'复制路线链接', copied:'已复制 ✓', expand:'展开', collapse:'收起',
     viewCards:'卡片', viewTable:'表格', colName:'地点', colEra:'时代', colAddr:'地址', colTitle:'相关资料', countOf:'共 {all} 处中的 {n} 处',
   },
   ja: {
@@ -106,6 +112,8 @@ const UI = {
     mapLayerStreet:'地図', mapLayerSat:'衛星写真',
     srcLabel:'韓国語原文', origNote:'以下の詳細は韓国語の原文です。ボタンでGoogle翻訳を開けます。', translate:'Google翻訳で開く',
     loading:'データを読み込み中です…', loadError:'データを読み込めませんでした。API設定（キーとURL）とサーバーの起動状態を確認してください。index.htmlをファイルとして直接開くとAPIを呼び出せません。', retry:'再試行',
+    practiceTitle:'練習モード', practiceMsg:'APIに接続できなかったため、内蔵の第1段階ファイルデータ（2022-12-09時点）を表示しています。', reload:'APIから再読み込み',
+    favOnly:'お気に入りのみ', optimize:'近い順に並べ替え', directions:'Googleマップで経路', share:'コースのリンクをコピー', copied:'コピーしました ✓', expand:'続きを見る', collapse:'閉じる',
     viewCards:'カード', viewTable:'表', colName:'場所', colEra:'時代', colAddr:'住所', colTitle:'関連資料', countOf:'全{all}か所中 {n}か所',
   },
 };
