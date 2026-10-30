@@ -12,6 +12,7 @@ const DEFAULT_INFO_URL = 'https://api.odcloud.kr/api/15109587/v1/uddi:56c2b3a4-4
 const DEFAULT_LOCATION_URL = 'https://api.odcloud.kr/api/15109570/v1/uddi:8781448b-81a8-487c-bc95-d26335bafa82';
 
 const PER_PAGE = 500;
+const TIMEOUT_MS = 8000; // API가 응답하지 않아도 무한정 기다리지 않도록
 const MAX_PAGES = 20;
 
 // 응답 필드(한글 컬럼명) -> 화면에서 쓰는 이름. 공백 차이는 무시하고 찾습니다.
@@ -51,7 +52,7 @@ function withKey(baseUrl, key, page) {
 async function fetchAll(label, baseUrl, key) {
   const rows = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
-    const res = await fetch(withKey(baseUrl, key, page), { headers: { Accept: 'application/json' } });
+    const res = await fetch(withKey(baseUrl, key, page), { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(TIMEOUT_MS) });
     if (!res.ok) throw new Error(`${label} API ${res.status}`);
     const body = await res.json();
     const data = Array.isArray(body.data) ? body.data : [];
@@ -106,6 +107,9 @@ module.exports = async function handler(req, res) {
     // 데이터는 거의 바뀌지 않으므로 하루 동안 Vercel 엣지에 캐시합니다.
     return send(200, { count: items.length, items }, { 'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800' });
   } catch (e) {
-    return send(502, { error: 'upstream_failed', detail: String(e.message || e) }, { 'Cache-Control': 'no-store' });
+    // 오류 문구에 인증키가 섞여 나가지 않도록 가립니다.
+    const redact = s => [JEJU_CULTURE_INFO_KEY, JEJU_CULTURE_LOCATION_KEY].reduce(
+      (a, k) => a.split(k.trim()).join('***').split(encodeURIComponent(k.trim())).join('***'), String(s));
+    return send(502, { error: 'upstream_failed', detail: redact(e.message || e) }, { 'Cache-Control': 'no-store' });
   }
 };

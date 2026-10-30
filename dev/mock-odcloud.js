@@ -1,9 +1,8 @@
 // 로컬 테스트용 모의 API. 두 CSV를 공공데이터포털(odcloud) 응답 형식으로 돌려줍니다.
-//   node dev/mock-odcloud.js   → http://localhost:4010/general , /location  (serviceKey=TESTKEY)
+//   node dev/mock-odcloud.js   → http://localhost:4010/general , /location  (serviceKey 는 비어 있지만 않으면 통과)
 const http = require('http'), fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..');
 const PORT = process.env.MOCK_PORT || 4010;
-const KEY = 'TESTKEY';
 
 function parseCsv(text) {
   const rows = []; let row = [], cur = '', q = false;
@@ -33,8 +32,8 @@ http.createServer((req, res) => {
   const name = u.pathname.replace('/', '');
   const send = (s, b) => { res.writeHead(s, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(b)); };
   if (!data[name]) return send(404, { msg: 'not found' });
-  if (u.searchParams.get('serviceKey') !== KEY) return send(401, { code: -4, msg: '등록되지 않은 인증키 입니다.' });
+  if (!u.searchParams.get('serviceKey')) return send(401, { code: -4, msg: '등록되지 않은 인증키 입니다.' });
   const page = +u.searchParams.get('page') || 1, perPage = +u.searchParams.get('perPage') || 10;
   const all = data[name], slice = all.slice((page - 1) * perPage, page * perPage);
   send(200, { page, perPage, totalCount: all.length, currentCount: slice.length, matchCount: all.length, data: slice });
-}).listen(PORT, () => console.log(`mock API: http://localhost:${PORT}/general  /location  (serviceKey=${KEY})`));
+}).listen(PORT, () => console.log(`mock API: http://localhost:${PORT}/general  /location`));

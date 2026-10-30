@@ -93,6 +93,8 @@
   dd { margin:0; word-break:break-word; }
   .dbody h3 { font-size:14px; margin:16px 0 6px; color:var(--accent); }
   .dbody p { margin:0; white-space:pre-wrap; }
+  mark { background:#ffe08a; color:#1d2330; border-radius:2px; padding:0 1px; }
+  .bar select { padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--text); font:inherit; font-size:13px; }
   .banner { margin:12px 24px 0; padding:10px 14px; border:1px solid #e0a800; background:#fff6d6; color:#5c4500; border-radius:8px; font-size:14px; display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; }
   @media (prefers-color-scheme: dark) { .banner { background:#3a3000; color:#ffe9a0; border-color:#8a6d00; } }
   .banner strong { background:#e0a800; color:#1d2330; border-radius:10px; padding:1px 10px; }
@@ -115,7 +117,9 @@
 
 <div class="bar">
   <div class="eras" id="eras"></div>
-  <input id="q" type="search">
+  <select id="region"></select>
+  <input id="q" type="search" list="qlist" autocomplete="off">
+  <datalist id="qlist"></datalist>
   <button class="mini" id="favOnly"></button>
   <div class="views"><button class="mini" data-v="cards" id="vcards"></button><button class="mini" data-v="table" id="vtable"></button></div>
 </div>
@@ -174,13 +178,15 @@ function prepare(items) {
   items.forEach(r => {
     const m = ERA_OF[r.id];
     r.era = m ? m[0] : 'etc'; r.basis = m ? m[1] : ''; r.general = !!(m && m[2]);
+    r.city = (r.addr || '').split(' ')[1] || '';   // 제주시 / 서귀포시
   });
   return items;
 }
 const byId = id => DATA.find(r => r.id === id);
 const searchText = r => [r.name, nm(r), r.addr, r.title, r.subject, r.content, r.basis, basisOf(r)].join(' ').toLowerCase();
 
-const state = { era:'all', q:'', more:0, view:'cards', sort:'id', dir:1, status:'loading', err:'', practice:false, favOnly:false };
+const state = { era:'all', q:'', more:0, view:'cards', sort:'id', dir:1, status:'loading', err:'', practice:false, favOnly:false, region:'all' };
+const CITY_KEY = { '제주시':'cityJeju', '서귀포시':'citySeogwipo' };
 const eraOrder = Object.fromEntries(ERAS.map((e, i) => [e.key, i]));
 const ETC_STEP = 12;
 
@@ -273,8 +279,21 @@ function setLayerControl() {
   layerCtl = L.control.layers({ [t('mapLayerStreet')]:street, [t('mapLayerSat')]:sat }, null, { position:'topright' }).addTo(map);
 }
 
-function snippet(r) {
+// 검색어와 일치한 부분을 <mark> 로 강조 (esc 한 뒤에 감싸서 안전)
+const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function hl(text) {
+  const out = esc(text), q = state.q.trim();
+  if (!q) return out;
+  return out.replace(new RegExp(escRe(esc(q)), 'gi'), m => `<mark>${m}</mark>`);
+}
+// withQuery: 검색어가 본문 뒤쪽에 있으면 그 부분이 보이도록 요약을 옮김
+function snippet(r, withQuery = false) {
   const s = blank(r.content) ? (blank(r.abs) ? '' : r.abs) : r.content;
+  const q = state.q.trim().toLowerCase();
+  if (withQuery && q) {
+    const i = s.toLowerCase().indexOf(q);
+    if (i > 80) { const from = Math.max(0, i - 40); return '…' + s.slice(from, from + 110) + '…'; }
+  }
   return s.length > 110 ? s.slice(0, 110) + '…' : s;
 }
 function popup(r) {
@@ -305,13 +324,13 @@ function focusOnMap(id) {
 // ---------- 목록 ----------
 function visible() {
   const q = state.q.trim().toLowerCase();
-  return DATA.filter(r => (state.era === 'all' || r.era === state.era) && (!state.favOnly || isFav(r.id)) && (!q || searchText(r).includes(q)));
+  return DATA.filter(r => (state.era === 'all' || r.era === state.era) && (state.region === 'all' || r.city === state.region) && (!state.favOnly || isFav(r.id)) && (!q || searchText(r).includes(q)));
 }
 function cardHtml(r) {
   const e = eraBy[r.era], b = basisOf(r);
-  return `<article class="card" style="--c:${e.color}"><h3>${esc(nm(r))}</h3>${lang !== 'ko' ? `<div class="ko">${esc(r.name)}</div>` : ''}${blank(r.title) ? '' : `<div class="ttl">${esc(r.title)}</div>`}<div class="addr">${esc(r.addr)}</div>` +
-    (b ? `<div class="basis">${esc(b)}${r.general && lang === 'ko' ? ` <em>${t('general')}</em>` : ''}</div>` : '') +
-    `<div class="snip">${lang !== 'ko' ? `<em class="src">${t('srcLabel')}</em>` : ''}${esc(snippet(r))}</div><div class="acts"><button class="mini" data-d="${r.id}">${t('detail')}</button><button class="mini" data-map="${r.id}">${t('onMap')}</button><span data-slot="${r.id}"></span></div></article>`;
+  return `<article class="card" style="--c:${e.color}"><h3>${hl(nm(r))}</h3>${lang !== 'ko' ? `<div class="ko">${hl(r.name)}</div>` : ''}${blank(r.title) ? '' : `<div class="ttl">${hl(r.title)}</div>`}<div class="addr">${hl(r.addr)}</div>` +
+    (b ? `<div class="basis">${hl(b)}${r.general && lang === 'ko' ? ` <em>${t('general')}</em>` : ''}</div>` : '') +
+    `<div class="snip">${lang !== 'ko' ? `<em class="src">${t('srcLabel')}</em>` : ''}${hl(snippet(r, true))}</div><div class="acts"><button class="mini" data-d="${r.id}">${t('detail')}</button><button class="mini" data-map="${r.id}">${t('onMap')}</button><span data-slot="${r.id}"></span></div></article>`;
 }
 function tableHtml(rows) {
   const val = { id:r => r.id, name:r => nm(r), era:r => eraOrder[r.era], addr:r => r.addr, title:r => r.title };
@@ -320,7 +339,7 @@ function tableHtml(rows) {
   const cols = [['fav', ''], ['name', t('colName')], ['era', t('colEra')], ['addr', t('colAddr')], ['title', t('colTitle')]];
   return `<div class="tablewrap"><div class="cnt">${t('countOf', { n:rows.length, all:DATA.length })}</div><table><thead><tr>` +
     cols.map(([key, label]) => `<th data-k="${key}" class="${key === k ? 'sorted' : ''}">${label}${key === k ? (state.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '</tr></thead><tbody>' +
-    sorted.map(r => { const e = eraBy[r.era]; return `<tr data-row="${r.id}"><td><span data-slot="${r.id}"></span></td><td>${esc(nm(r))}${lang !== 'ko' ? ` <small style="color:var(--muted)">${esc(r.name)}</small>` : ''}</td><td><span class="etag" style="--c:${e.color}">${esc(eraName(e))}</span></td><td class="wrap">${esc(r.addr)}</td><td class="wrap">${blank(r.title) ? '' : esc(r.title)}</td></tr>`; }).join('') +
+    sorted.map(r => { const e = eraBy[r.era]; return `<tr data-row="${r.id}"><td><span data-slot="${r.id}"></span></td><td>${hl(nm(r))}${lang !== 'ko' ? ` <small style="color:var(--muted)">${hl(r.name)}</small>` : ''}</td><td><span class="etag" style="--c:${e.color}">${esc(eraName(e))}</span></td><td class="wrap">${hl(r.addr)}</td><td class="wrap">${blank(r.title) ? '' : hl(r.title)}</td></tr>`; }).join('') +
     '</tbody></table></div>';
 }
 function render() {
@@ -399,6 +418,13 @@ function applyLang() {
     return `<button class="era-btn" data-k="${e.key}" style="--c:${e.color}">${e.key === 'all' ? t('all') : esc(eraName(e))} ${n}</button>`;
   }).join('');
   $('favOnly').textContent = `♥ ${t('favOnly')} (${favs.length})`; $('favOnly').classList.toggle('on', state.favOnly);
+  // 지역 필터(제주시/서귀포시) 선택지와 검색어 자동완성 목록
+  const cities = [...new Set(DATA.map(r => r.city).filter(Boolean))].sort();
+  $('region').innerHTML = `<option value="all">${t('regionAll')}</option>` +
+    cities.map(c => `<option value="${esc(c)}">${esc(t(CITY_KEY[c] || c))} (${DATA.filter(r => r.city === c).length})</option>`).join('');
+  if (!cities.includes(state.region)) state.region = 'all';
+  $('region').value = state.region; $('region').hidden = !cities.length;
+  $('qlist').innerHTML = DATA.map(r => `<option value="${esc(nm(r))}"></option>`).join('');
   $('banner').hidden = !state.practice;
   if (state.practice) $('banner').innerHTML = `<strong>${t('practiceTitle')}</strong><span>${t('practiceMsg')}</span><button class="mini" id="bretry">${t('reload')}</button><small>${esc(state.err)}</small>`;
   $('legend').innerHTML = ERAS.map(e => `<span><i style="background:${e.color}"></i>${esc(eraName(e))}</span>`).join('') + `<span><i style="background:#d6335a"></i>${t('legendCourse')}</span>`;
@@ -427,13 +453,14 @@ $('dbody').addEventListener('click', e => {
   const p = b.previousElementSibling; p.classList.toggle('clamp');
   b.textContent = p.classList.contains('clamp') ? t('expand') : t('collapse');
 });
+$('region').onchange = e => { state.region = e.target.value; state.more = 0; refit = true; render(); };
 $('favOnly').onclick = () => { state.favOnly = !state.favOnly; state.more = 0; refit = true; $('favOnly').classList.toggle('on', state.favOnly); render(); };
 $('dclose').onclick = () => $('dlg').close();
 $('dlg').addEventListener('click', e => { if (e.target === $('dlg')) $('dlg').close(); });
 async function boot() {
   state.status = 'loading'; state.err = ''; applyLang();
   try {
-    const res = await fetch(API_URL, { headers:{ Accept:'application/json' } });
+    const res = await fetch(API_URL, { headers:{ Accept:'application/json' }, signal:AbortSignal.timeout(15000) });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.error === 'missing_env' ? `missing_env: ${(body.missing || []).join(', ')}` : `${res.status} ${body.error || ''} ${body.detail || ''}`.trim());
     if (!Array.isArray(body.items) || !body.items.length) throw new Error('empty response');
