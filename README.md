@@ -105,7 +105,7 @@ npm run dev
 
 - `index.html` — 화면 (`src/` 를 합쳐 만든 단일 파일)
 - `api/places.js` — API 함수 (두 API를 불러 장소 번호로 합침)
-- `src/template.html`, `src/eras.js`, `src/i18n.js` — 화면 원본 / 시대 분류 / 번역. 수정 후 `npm run build`
+- `src/template.html`, `src/eras.js`, `src/i18n.js` — 화면 원본 / 시대 분류 / 번역. 수정 후 `npm run bundle` (이름을 `build`로 하면 Vercel이 자동 빌드로 인식해 배포가 실패합니다)
 - `src/legacy/data.js` — 1단계 파일 데이터. 빌드할 때 연습 모드용으로 `index.html` 에 내장됩니다
 - `dev/` — 로컬 시험용 모의 API와 개발 서버
 
