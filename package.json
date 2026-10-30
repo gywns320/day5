@@ -1,0 +1,10 @@
+{
+  "name": "jeju-history-guide",
+  "private": true,
+  "scripts": {
+    "build": "node src/build.js",
+    "mock": "node dev/mock-odcloud.js",
+    "dev": "node dev/server.js"
+  },
+  "engines": { "node": ">=18" }
+}

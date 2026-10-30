@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>제주 역사문화 데이터 조회</title>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --text:#1d2330; --muted:#6b7280; --line:#e3e6ec; --accent:#0e7c86; --accent-soft:#e3f3f4; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14171c; --card:#1e2229; --text:#e8eaed; --muted:#9aa3b0; --line:#2f3540; --accent:#4fc3cc; --accent-soft:#1c3438; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif; font-size:15px; }
+  header { padding:20px 24px 8px; }
+  h1 { margin:0; font-size:22px; }
+  header p { margin:4px 0 0; color:var(--muted); font-size:13px; }
+  .filters { display:flex; flex-wrap:wrap; gap:8px; padding:12px 24px; }
+  .filters input, .filters select { padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--text); font:inherit; }
+  .filters input { flex:1 1 260px; min-width:0; }
+  .filters button { padding:8px 14px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--text); font:inherit; cursor:pointer; }
+  .count { padding:0 24px 8px; color:var(--muted); font-size:13px; }
+  .mapwrap { margin:0 24px 16px; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  #map { height:440px; background:var(--card); }
+  .pop h4 { margin:0 0 2px; font-size:15px; }
+  .pop .t { color:#0e7c86; font-size:13px; margin-bottom:4px; }
+  .pop .a { font-size:12px; color:#666; margin-bottom:6px; }
+  .pop .s { font-size:13px; line-height:1.5; margin-bottom:8px; }
+  .pop button { padding:5px 10px; border:0; border-radius:5px; background:#0e7c86; color:#fff; cursor:pointer; font:inherit; font-size:13px; }
+  .fav { border:1px solid var(--line); background:var(--card); color:var(--muted); border-radius:14px; padding:3px 10px; cursor:pointer; font:inherit; font-size:13px; white-space:nowrap; }
+  .fav.on { background:#fde8ec; border-color:#f4a3b3; color:#d6335a; }
+  .course { margin:0 24px 16px; padding:12px 16px; background:var(--card); border:1px solid var(--line); border-radius:8px; }
+  .course .ch { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .course h2 { margin:0; font-size:16px; flex:1 1 auto; }
+  .course .sum { color:var(--muted); font-size:13px; }
+  .course button.mini { padding:4px 10px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--text); font:inherit; font-size:13px; cursor:pointer; }
+  .course ol { margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px; }
+  .course li { display:flex; align-items:center; gap:8px; }
+  .course li .n { flex:none; width:24px; height:24px; border-radius:50%; background:#d6335a; color:#fff; font-size:12px; font-weight:bold; display:flex; align-items:center; justify-content:center; }
+  .course li .nm { flex:1; min-width:0; cursor:pointer; }
+  .course li .leg { color:var(--muted); font-size:12px; }
+  .course .hint { margin:8px 0 0; color:var(--muted); font-size:13px; }
+  .pin { width:26px; height:26px; border-radius:50%; background:#d6335a; border:2px solid #fff; color:#fff; font-weight:bold; font-size:13px; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.4); }
+  .wrap { margin:0 24px 24px; background:var(--card); border:1px solid var(--line); border-radius:8px; overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { position:sticky; top:0; background:var(--card); cursor:pointer; user-select:none; font-size:13px; color:var(--muted); }
+  th.sorted { color:var(--accent); }
+  tbody tr { cursor:pointer; }
+  tbody tr:hover { background:var(--accent-soft); }
+  td.addr { white-space:normal; min-width:240px; }
+  .tag { display:inline-block; padding:2px 8px; border-radius:10px; background:var(--accent-soft); color:var(--accent); font-size:12px; }
+  .empty { padding:40px; text-align:center; color:var(--muted); }
+  .pager { display:flex; gap:6px; justify-content:center; align-items:center; padding:0 24px 28px; }
+  .pager button { padding:6px 12px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--text); font:inherit; cursor:pointer; }
+  .pager button:disabled { opacity:.4; cursor:default; }
+  dialog { width:min(720px, 94vw); max-height:88vh; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--text); padding:0; }
+  dialog::backdrop { background:rgba(0,0,0,.5); }
+  .dhead { display:flex; justify-content:space-between; gap:12px; padding:16px 20px; border-bottom:1px solid var(--line); }
+  .dhead h2 { margin:0; font-size:19px; }
+  .dhead small { color:var(--muted); }
+  .dhead button { border:0; background:none; color:var(--muted); font-size:22px; cursor:pointer; align-self:flex-start; }
+  .dbody { padding:16px 20px 20px; overflow-y:auto; max-height:calc(88vh - 70px); line-height:1.65; }
+  dl { display:grid; grid-template-columns:90px 1fr; gap:6px 12px; margin:0 0 16px; }
+  dt { color:var(--muted); font-size:13px; }
+  dd { margin:0; word-break:break-word; }
+  .dbody h3 { font-size:14px; margin:16px 0 6px; color:var(--accent); }
+  .dbody p { margin:0; white-space:pre-wrap; }
+  a { color:var(--accent); }
+  @media (max-width:600px) { header, .filters, .count, .pager { padding-left:12px; padding-right:12px; } .wrap, .mapwrap, .course { margin:0 12px 16px; } #map { height:320px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>제주 역사문화 데이터 조회</h1>
+  <p>제주특별자치도 제주역사문화 위치정보 · 일반정보 (데이터 기준일 2022-12-09)</p>
+</header>
+
+<div class="filters">
+  <input id="q" type="search" placeholder="장소명, 주소, 제목, 주제, 내용 검색">
+  <select id="city"><option value="">전체 지역</option></select>
+  <select id="cat"><option value="">전체 분류</option></select>
+  <select id="d1"><option value="">전체 디렉토리</option></select>
+  <button id="reset">초기화</button>
+</div>
+<div class="count" id="count"></div>
+
+<div class="mapwrap"><div id="map"><div class="empty" id="mapfail" hidden>지도를 불러오려면 인터넷 연결이 필요합니다.</div></div></div>
+
+<div class="course" id="course"></div>
+
+<div class="wrap">
+  <table>
+    <thead><tr id="thead"></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="empty" id="empty" hidden>검색 결과가 없습니다.</div>
+</div>
+<div class="pager" id="pager"></div>
+
+<dialog id="dlg">
+  <div class="dhead">
+    <div><h2 id="dtitle"></h2><small id="dsub"></small></div>
+    <button id="dclose" aria-label="닫기">×</button>
+  </div>
+  <div class="dbody" id="dbody"></div>
+</dialog>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="data.js"></script>
+<script>
+const COLS = [
+  { key:'fav', label:'찜' },
+  { key:'id', label:'번호' },
+  { key:'name', label:'장소명' },
+  { key:'city', label:'지역' },
+  { key:'cat', label:'분류' },
+  { key:'d1', label:'디렉토리' },
+  { key:'title', label:'제목' },
+  { key:'addr', label:'주소', cls:'addr' },
+];
+const PAGE = 20;
+const $ = id => document.getElementById(id);
+DATA.forEach(r => { r.city = (r.addr.split(' ')[1] || ''); r._s = [r.name,r.addr,r.title,r.subject,r.d1,r.d2,r.content,r.author].join(' ').toLowerCase(); });
+
+const state = { q:'', city:'', cat:'', d1:'', sort:'id', dir:1, page:1 };
+
+let favs = [];
+try { favs = JSON.parse(localStorage.getItem('jeju-favs') || '[]').filter(id => DATA.some(r => r.id === id)); } catch (e) {}
+const isFav = id => favs.includes(id);
+const byId = id => DATA.find(r => r.id === id);
+function toggleFav(id) {
+  favs = isFav(id) ? favs.filter(x => x !== id) : [...favs, id];
+  try { localStorage.setItem('jeju-favs', JSON.stringify(favs)); } catch (e) {}
+  render(true);
+  document.querySelectorAll(`[data-favbtn="${id}"]`).forEach(b => setFavBtn(b, id));
+}
+function setFavBtn(b, id) { b.classList.toggle('on', isFav(id)); b.textContent = isFav(id) ? '♥ 찜함' : '♡ 찜'; }
+function favBtn(id) { const b = document.createElement('button'); b.className = 'fav'; b.dataset.favbtn = id; setFavBtn(b, id); b.onclick = e => { e.stopPropagation(); toggleFav(id); }; return b; }
+
+function km(a, b) {
+  const R = 6371, rad = Math.PI / 180, dLat = (b.lat-a.lat)*rad, dLng = (b.lng-a.lng)*rad;
+  const h = Math.sin(dLat/2)**2 + Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function move(i, d) { const j = i + d; if (j < 0 || j >= favs.length) return; [favs[i], favs[j]] = [favs[j], favs[i]]; try { localStorage.setItem('jeju-favs', JSON.stringify(favs)); } catch (e) {} render(true); }
+
+function renderCourse() {
+  const rs = favs.map(byId);
+  let total = 0;
+  const legs = rs.map((r, i) => i ? km(rs[i-1], r) : 0);
+  legs.forEach(d => total += d);
+  const box = $('course');
+  box.innerHTML = `<div class="ch"><h2>나의 답사 코스 (${rs.length}곳)</h2>` +
+    (rs.length ? `<span class="sum">직선거리 합계 약 ${total.toFixed(1)}km</span><button class="mini" id="cfit">코스 보기</button><button class="mini" id="cclear">모두 지우기</button>` : '') + '</div>' +
+    (rs.length ? '<ol>' + rs.map((r, i) => `<li><span class="n">${i+1}</span><span class="nm" data-id="${r.id}">${esc(r.name)}${i ? ` <span class="leg">(이전 장소에서 ${legs[i].toFixed(1)}km)</span>` : ''}</span><button class="mini" data-m="${i}:-1" ${i?'':'disabled'}>▲</button><button class="mini" data-m="${i}:1" ${i<rs.length-1?'':'disabled'}>▼</button><button class="mini" data-m="${i}:x">✕</button></li>`).join('') + '</ol>'
+      : '<p class="hint">표나 지도 말풍선에서 ♡ 찜을 누르면, 누른 순서대로 지도에 선으로 이어집니다.</p>');
+  if (!map) return;
+  courseLayer.clearLayers();
+  if (rs.length > 1) L.polyline(rs.map(r => [r.lat, r.lng]), { color:'#d6335a', weight:4, opacity:.8, dashArray:'8 6' }).addTo(courseLayer);
+  rs.forEach((r, i) => {
+    L.marker([r.lat, r.lng], { icon:L.divIcon({ className:'', html:`<div class="pin">${i+1}</div>`, iconSize:[26,26], iconAnchor:[13,13] }), zIndexOffset:1000, title:r.name })
+      .on('click', () => detail(r)).addTo(courseLayer);
+  });
+}
+$('course').onclick = e => {
+  const m = e.target.closest('[data-m]');
+  if (m) { const [i, d] = m.dataset.m.split(':'); if (d === 'x') { toggleFav(favs[+i]); } else move(+i, +d); return; }
+  if (e.target.id === 'cclear') { favs = []; try { localStorage.setItem('jeju-favs', '[]'); } catch (x) {} render(true); document.querySelectorAll('[data-favbtn]').forEach(b => setFavBtn(b, +b.dataset.favbtn)); return; }
+  if (e.target.id === 'cfit' && map) { map.fitBounds(L.latLngBounds(favs.map(id => [byId(id).lat, byId(id).lng])).pad(0.15), { maxZoom:14 }); return; }
+  const nm = e.target.closest('.nm'); if (nm) detail(byId(+nm.dataset.id));
+};
+
+function fillSelect(el, key) {
+  [...new Set(DATA.map(r => r[key]).filter(Boolean))].sort().forEach(v => el.add(new Option(v, v)));
+}
+fillSelect($('city'), 'city'); fillSelect($('cat'), 'cat'); fillSelect($('d1'), 'd1');
+
+$('thead').innerHTML = COLS.map(c => `<th data-k="${c.key}">${c.label}<span></span></th>`).join('');
+
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+const blank = v => !v || v === '해당없음';
+
+function filtered() {
+  const q = state.q.trim().toLowerCase();
+  const rows = DATA.filter(r => (!q || r._s.includes(q)) && (!state.city || r.city === state.city) && (!state.cat || r.cat === state.cat) && (!state.d1 || r.d1 === state.d1));
+  const k = state.sort;
+  rows.sort((a,b) => (typeof a[k] === 'number' ? a[k]-b[k] : String(a[k]).localeCompare(String(b[k]),'ko')) * state.dir);
+  return rows;
+}
+
+let map, layer, courseLayer, refit = true;
+if (window.L) {
+  map = L.map('map').setView([33.38, 126.55], 10);
+  const street = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', { maxZoom:19, subdomains:'abc', attribution:'&copy; OpenStreetMap contributors, tiles OSM France' }).addTo(map);
+  const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, maxNativeZoom:17, attribution:'Tiles &copy; Esri' });
+  L.control.layers({ '일반 지도':street, '위성 사진':sat }, null, { position:'topright' }).addTo(map);
+  layer = L.layerGroup().addTo(map);
+  courseLayer = L.layerGroup().addTo(map);
+} else { $('mapfail').hidden = false; }
+
+function snippet(r) {
+  const t = blank(r.content) ? (blank(r.abs) ? '' : r.abs) : r.content;
+  return t.length > 140 ? t.slice(0,140) + '…' : t;
+}
+
+function updateMap(rows) {
+  if (!map) return;
+  layer.clearLayers();
+  rows.forEach(r => {
+    const el = document.createElement('div');
+    el.className = 'pop';
+    el.innerHTML = `<h4>${esc(r.name)}</h4>${blank(r.title)?'':`<div class="t">${esc(r.title)}</div>`}<div class="a">${esc(r.addr)}</div><div class="s">${esc(snippet(r))}</div><button>자세히 보기</button>`;
+    el.querySelector('button').onclick = () => detail(r);
+    el.appendChild(document.createTextNode(' '));
+    el.appendChild(favBtn(r.id));
+    L.marker([r.lat, r.lng], { title:r.name }).bindPopup(el, { maxWidth:300 }).addTo(layer);
+  });
+  if (refit && rows.length) map.fitBounds(L.latLngBounds(rows.map(r => [r.lat, r.lng])).pad(0.1), { maxZoom:14 });
+  refit = false;
+}
+
+function render(skipMap) {
+  const rows = filtered();
+  if (!skipMap) updateMap(rows);
+  renderCourse();
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE));
+  state.page = Math.min(state.page, pages);
+  const slice = rows.slice((state.page-1)*PAGE, state.page*PAGE);
+  $('count').textContent = `전체 ${DATA.length}건 중 ${rows.length}건 (지도 핀 ${rows.length}개)`;
+  $('empty').hidden = rows.length > 0;
+  $('tbody').innerHTML = slice.map(r => `<tr data-id="${r.id}">` + COLS.map(c => {
+    const v = r[c.key];
+    if (c.key === 'fav') return `<td><button class="fav ${isFav(r.id)?'on':''}" data-fav="${r.id}">${isFav(r.id)?'♥ 찜함':'♡ 찜'}</button></td>`;
+    return `<td class="${c.cls||''}">${c.key==='cat' ? `<span class="tag">${esc(v)}</span>` : esc(v)}</td>`;
+  }).join('') + '</tr>').join('');
+  document.querySelectorAll('th').forEach(th => {
+    const on = th.dataset.k === state.sort;
+    th.classList.toggle('sorted', on);
+    th.lastChild.textContent = on ? (state.dir > 0 ? ' ▲' : ' ▼') : '';
+  });
+  $('pager').innerHTML = pages > 1
+    ? `<button ${state.page<=1?'disabled':''} data-p="${state.page-1}">이전</button><span>${state.page} / ${pages}</span><button ${state.page>=pages?'disabled':''} data-p="${state.page+1}">다음</button>`
+    : '';
+}
+
+function detail(r) {
+  const rows = [['지역', r.city], ['주소', r.addr + (r.zip ? ` (${r.zip})` : '')], ['좌표', `${r.lat}, ${r.lng}`],
+    ['분류', [r.cat, r.d1, r.d2].filter(x => !blank(x)).join(' › ')], ['저작자', r.author], ['주제', r.subject],
+    ['발행일', r.pubdate], ['자료유형', r.type], ['출처', r.source]].filter(([,v]) => !blank(v));
+  let h = `<dl>${rows.map(([k,v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`;
+  [['내용', r.content], ['목차', r.toc], ['초록', r.abs], ['참고문헌', r.ref]].forEach(([k,v]) => { if (!blank(v)) h += `<h3>${k}</h3><p>${esc(v)}</p>`; });
+  h += `<h3>링크</h3><p><a href="${esc(r.url)}" target="_blank" rel="noopener">제주 디지털 콘텐츠에서 보기</a> · <a href="https://www.google.com/maps?q=${r.lat},${r.lng}" target="_blank" rel="noopener">지도에서 보기</a></p>`;
+  $('dtitle').textContent = r.name;
+  $('dsub').textContent = blank(r.title) ? '' : r.title;
+  $('dbody').innerHTML = h;
+  $('dbody').prepend(favBtn(r.id));
+  $('dlg').showModal();
+}
+
+let timer;
+$('q').addEventListener('input', e => { clearTimeout(timer); timer = setTimeout(() => { state.q = e.target.value; state.page = 1; refit = true; render(); }, 150); });
+['city','cat','d1'].forEach(k => $(k).addEventListener('change', e => { state[k] = e.target.value; state.page = 1; refit = true; render(); }));
+$('reset').onclick = () => { refit = true; Object.assign(state, { q:'', city:'', cat:'', d1:'', sort:'id', dir:1, page:1 }); $('q').value=''; ['city','cat','d1'].forEach(k => $(k).value=''); render(); };
+$('thead').onclick = e => { const th = e.target.closest('th'); if (!th || th.dataset.k === 'fav') return; const k = th.dataset.k; state.dir = state.sort === k ? -state.dir : 1; state.sort = k; render(); };
+$('pager').onclick = e => { const b = e.target.closest('button'); if (b && !b.disabled) { state.page = +b.dataset.p; render(); scrollTo(0,0); } };
+$('tbody').onclick = e => { const f = e.target.closest('[data-fav]'); if (f) { toggleFav(+f.dataset.fav); return; } const tr = e.target.closest('tr'); if (tr) detail(DATA.find(r => r.id === +tr.dataset.id)); };
+$('dclose').onclick = () => $('dlg').close();
+$('dlg').addEventListener('click', e => { if (e.target === $('dlg')) $('dlg').close(); });
+render();
+</script>
+</body>
+</html>

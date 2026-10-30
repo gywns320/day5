@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>제주 시대별 역사유적 안내</title>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --text:#1d2330; --muted:#6b7280; --line:#e3e6ec; --accent:#0e7c86; --accent-soft:#e3f3f4; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14171c; --card:#1e2229; --text:#e8eaed; --muted:#9aa3b0; --line:#2f3540; --accent:#4fc3cc; --accent-soft:#1c3438; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"Malgun Gothic","Apple SD Gothic Neo","Microsoft YaHei","PingFang SC","Yu Gothic","Meiryo",sans-serif; font-size:15px; line-height:1.6; }
+  .top { padding:24px 24px 8px; display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; }
+  .top h1 { margin:0; font-size:24px; flex:1 1 auto; }
+  .top p { margin:0; color:var(--muted); font-size:13px; flex-basis:100%; }
+  .top select { padding:6px 10px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--text); font:inherit; }
+  a { color:var(--accent); }
+  .bar { position:sticky; top:0; z-index:500; background:var(--bg); padding:8px 24px; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .eras { display:flex; flex-wrap:wrap; gap:6px; flex:1 1 auto; }
+  .era-btn { padding:6px 12px; border:2px solid var(--c); border-radius:18px; background:var(--card); color:var(--text); font:inherit; font-size:13px; cursor:pointer; }
+  .era-btn.on { background:var(--c); color:#fff; }
+  .bar input { padding:7px 10px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--text); font:inherit; width:220px; max-width:100%; }
+  .views { display:flex; gap:0; }
+  .views .mini { border-radius:0; }
+  .views .mini:first-child { border-radius:6px 0 0 6px; }
+  .views .mini:last-child { border-radius:0 6px 6px 0; border-left:0; }
+  .views .mini.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .tablewrap { margin:0 24px 24px; background:var(--card); border:1px solid var(--line); border-radius:8px; overflow-x:auto; }
+  .tablewrap .cnt { padding:10px 12px; color:var(--muted); font-size:13px; border-bottom:1px solid var(--line); }
+  table { width:100%; border-collapse:collapse; }
+  th, td { padding:9px 12px; text-align:left; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { color:var(--muted); font-size:13px; cursor:pointer; user-select:none; }
+  th.sorted { color:var(--accent); }
+  tbody tr { cursor:pointer; }
+  tbody tr:hover { background:var(--accent-soft); }
+  td.wrap { white-space:normal; min-width:220px; }
+  .etag { display:inline-block; padding:1px 8px; border-radius:10px; color:#fff; font-size:12px; background:var(--c); }
+  .mapwrap { margin:16px 24px; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  #map { height:420px; background:var(--card); }
+  .mapfail { padding:40px; text-align:center; color:var(--muted); }
+  .legend { display:flex; flex-wrap:wrap; gap:12px; padding:8px 12px; background:var(--card); border-top:1px solid var(--line); font-size:12px; color:var(--muted); }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px; vertical-align:middle; }
+  .dot { width:16px; height:16px; border-radius:50%; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.45); }
+  .pin { width:26px; height:26px; border-radius:50%; background:#d6335a; border:2px solid #fff; color:#fff; font-weight:bold; font-size:13px; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.4); }
+  .pop h4 { margin:0 0 2px; font-size:15px; }
+  .pop .t { font-size:12px; margin-bottom:4px; font-weight:bold; }
+  .pop .a { font-size:12px; color:#666; margin-bottom:6px; }
+  .pop .s { font-size:13px; line-height:1.5; margin-bottom:8px; }
+  .pop button { padding:5px 10px; border:0; border-radius:5px; background:#0e7c86; color:#fff; cursor:pointer; font:inherit; font-size:13px; }
+  .fav { border:1px solid var(--line); background:var(--card); color:var(--muted); border-radius:14px; padding:3px 10px; cursor:pointer; font:inherit; font-size:13px; white-space:nowrap; }
+  .fav.on { background:#fde8ec; border-color:#f4a3b3; color:#d6335a; }
+  .course { margin:0 24px 16px; padding:12px 16px; background:var(--card); border:1px solid var(--line); border-radius:8px; }
+  .course .ch { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .course h2 { margin:0; font-size:16px; flex:1 1 auto; }
+  .course .sum, .course .hint { color:var(--muted); font-size:13px; }
+  .course .hint { margin:8px 0 0; }
+  .mini { padding:4px 10px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--text); font:inherit; font-size:13px; cursor:pointer; }
+  .mini:disabled { opacity:.4; cursor:default; }
+  .course ol { margin:10px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px; }
+  .course li { display:flex; align-items:center; gap:8px; }
+  .course li .n { flex:none; width:24px; height:24px; border-radius:50%; background:#d6335a; color:#fff; font-size:12px; font-weight:bold; display:flex; align-items:center; justify-content:center; }
+  .course li .nm { flex:1; min-width:0; cursor:pointer; }
+  .course li .leg { color:var(--muted); font-size:12px; }
+  section.era { margin:0 24px 28px; }
+  .era h2 { margin:0; font-size:20px; padding-left:12px; border-left:6px solid var(--c); }
+  .era h2 small { color:var(--muted); font-size:13px; font-weight:normal; margin-left:8px; }
+  .era .intro { margin:6px 0 12px 18px; color:var(--muted); font-size:14px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-top:4px solid var(--c); border-radius:8px; padding:12px 14px; display:flex; flex-direction:column; gap:6px; }
+  .card h3 { margin:0; font-size:17px; }
+  .card .ko { font-size:12px; color:var(--muted); margin-top:-4px; }
+  .card .ttl { font-size:13px; color:var(--accent); }
+  .card .addr { font-size:12px; color:var(--muted); }
+  .card .basis { font-size:13px; padding:6px 8px; background:var(--accent-soft); border-radius:6px; }
+  .card .basis em { font-style:normal; color:var(--muted); font-size:11px; }
+  .card .snip { font-size:13px; flex:1; }
+  .card .snip .src { font-style:normal; font-size:11px; color:var(--muted); border:1px solid var(--line); border-radius:8px; padding:0 6px; margin-right:4px; }
+  .card .acts { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+  .more { display:block; margin:12px auto 0; }
+  .empty { padding:30px; text-align:center; color:var(--muted); }
+  .note { margin:0 24px 24px; color:var(--muted); font-size:12px; }
+  dialog { width:min(720px, 94vw); max-height:88vh; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--text); padding:0; }
+  dialog::backdrop { background:rgba(0,0,0,.5); }
+  .dhead { display:flex; justify-content:space-between; gap:12px; padding:16px 20px; border-bottom:1px solid var(--line); }
+  .dhead h2 { margin:0; font-size:19px; }
+  .dhead small { color:var(--muted); }
+  .dhead button { border:0; background:none; color:var(--muted); font-size:22px; cursor:pointer; align-self:flex-start; }
+  .dbody { padding:16px 20px 20px; overflow-y:auto; max-height:calc(88vh - 70px); }
+  .origbox { margin:12px 0 0; padding:8px 10px; background:var(--accent-soft); border-radius:6px; font-size:13px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  dl { display:grid; grid-template-columns:90px 1fr; gap:6px 12px; margin:12px 0 16px; }
+  dt { color:var(--muted); font-size:13px; }
+  dd { margin:0; word-break:break-word; }
+  .dbody h3 { font-size:14px; margin:16px 0 6px; color:var(--accent); }
+  .dbody p { margin:0; white-space:pre-wrap; }
+  @media (max-width:600px) { .top, .bar { padding-left:12px; padding-right:12px; } .mapwrap, .course, section.era, .note, .tablewrap { margin-left:12px; margin-right:12px; } #map { height:320px; } }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1 id="h1"></h1>
+  <select id="lang" aria-label="Language / 언어 / 语言 / 言語"></select>
+  <p id="subtitle"></p>
+</div>
+
+<div class="bar">
+  <div class="eras" id="eras"></div>
+  <input id="q" type="search">
+  <div class="views"><button class="mini" data-v="cards" id="vcards"></button><button class="mini" data-v="table" id="vtable"></button></div>
+</div>
+
+<div class="mapwrap">
+  <div id="map"><div class="mapfail" id="mapfail" hidden></div></div>
+  <div class="legend" id="legend"></div>
+</div>
+
+<div class="course" id="course"></div>
+
+<main id="main"></main>
+
+<p class="note" id="note"></p>
+
+<dialog id="dlg">
+  <div class="dhead">
+    <div><h2 id="dtitle"></h2><small id="dsub"></small></div>
+    <button id="dclose" aria-label="Close">×</button>
+  </div>
+  <div class="dbody" id="dbody"></div>
+</dialog>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="eras.js"></script>
+<script src="i18n.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const blank = v => !v || v === '해당없음';
+const eraBy = Object.fromEntries(ERAS.map(e => [e.key, e]));
+
+// ---------- 언어 ----------
+function initialLang() {
+  try { const s = localStorage.getItem('jeju-lang'); if (LANGS.some(l => l.code === s)) return s; } catch (e) {}
+  const n = (navigator.language || 'en').toLowerCase();
+  return n.startsWith('ko') ? 'ko' : n.startsWith('zh') ? 'zh' : n.startsWith('ja') ? 'ja' : 'en';
+}
+let lang = initialLang();
+const NI = { en:0, zh:1, ja:2 };
+const t = (k, v = {}) => (UI[lang][k] ?? UI.ko[k] ?? k).replace(/\{(\w+)\}/g, (_, x) => v[x]);
+const nm = r => lang === 'ko' ? r.name : (NAME_T[r.id]?.[NI[lang]] || r.name);
+const eraName = e => ERA_T[e.key][lang][0];
+const eraSpan = e => ERA_T[e.key][lang][1];
+const eraIntro = e => lang === 'ko' ? e.intro : ERA_INTRO[e.key][lang];
+const basisOf = r => lang === 'ko' ? r.basis : (BASIS_T[r.id]?.[lang] || '');
+
+// 장소 데이터는 서버 API(/api/places)에서 받아옵니다. (공공데이터포털 API를 서버가 대신 호출)
+const API_URL = '/api/places';
+let DATA = [];
+function prepare(items) {
+  items.forEach(r => {
+    const m = ERA_OF[r.id];
+    r.era = m ? m[0] : 'etc'; r.basis = m ? m[1] : ''; r.general = !!(m && m[2]);
+  });
+  return items;
+}
+const byId = id => DATA.find(r => r.id === id);
+const searchText = r => [r.name, nm(r), r.addr, r.title, r.subject, r.content, r.basis, basisOf(r)].join(' ').toLowerCase();
+
+const state = { era:'all', q:'', more:0, view:'cards', sort:'id', dir:1, status:'loading', err:'' };
+const eraOrder = Object.fromEntries(ERAS.map((e, i) => [e.key, i]));
+const ETC_STEP = 12;
+
+// ---------- 찜 / 코스 ----------
+let favs = [];
+try { favs = JSON.parse(localStorage.getItem('jeju-favs') || '[]'); } catch (e) {}
+const isFav = id => favs.includes(id);
+const saveFavs = () => { try { localStorage.setItem('jeju-favs', JSON.stringify(favs)); } catch (e) {} };
+function setFavBtn(b, id) { b.classList.toggle('on', isFav(id)); b.textContent = isFav(id) ? t('faved') : t('fav'); }
+function favBtn(id) { const b = document.createElement('button'); b.className = 'fav'; b.dataset.favbtn = id; setFavBtn(b, id); b.onclick = e => { e.stopPropagation(); toggleFav(id); }; return b; }
+function toggleFav(id) {
+  favs = isFav(id) ? favs.filter(x => x !== id) : [...favs, id];
+  saveFavs(); renderCourse();
+  document.querySelectorAll('[data-favbtn]').forEach(b => setFavBtn(b, +b.dataset.favbtn));
+}
+function km(a, b) {
+  const R = 6371, rad = Math.PI / 180, dLat = (b.lat-a.lat)*rad, dLng = (b.lng-a.lng)*rad;
+  const h = Math.sin(dLat/2)**2 + Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function renderCourse() {
+  if (state.status !== 'ready') { $('course').innerHTML = ''; return; }
+  const rs = favs.map(byId);
+  const legs = rs.map((r, i) => i ? km(rs[i-1], r) : 0);
+  const total = legs.reduce((a, b) => a + b, 0);
+  $('course').innerHTML = `<div class="ch"><h2>${t('course')} (${t('courseCount', { n:rs.length })})</h2>` +
+    (rs.length ? `<span class="sum">${t('sum', { km:total.toFixed(1) })}</span><button class="mini" id="cfit">${t('fit')}</button><button class="mini" id="cclear">${t('clear')}</button>` : '') + '</div>' +
+    (rs.length ? '<ol>' + rs.map((r, i) => `<li><span class="n">${i+1}</span><span class="nm" data-id="${r.id}">${esc(nm(r))} <span class="leg">${esc(eraName(eraBy[r.era]))}${i ? ` · ${t('fromPrev', { km:legs[i].toFixed(1) })}` : ''}</span></span><button class="mini" data-m="${i}:-1" ${i?'':'disabled'}>▲</button><button class="mini" data-m="${i}:1" ${i<rs.length-1?'':'disabled'}>▼</button><button class="mini" data-m="${i}:x">✕</button></li>`).join('') + '</ol>'
+      : `<p class="hint">${t('hint')}</p>`);
+  if (!map) return;
+  courseLayer.clearLayers();
+  if (rs.length > 1) L.polyline(rs.map(r => [r.lat, r.lng]), { color:'#d6335a', weight:4, opacity:.8, dashArray:'8 6' }).addTo(courseLayer);
+  rs.forEach((r, i) => L.marker([r.lat, r.lng], { icon:L.divIcon({ className:'', html:`<div class="pin">${i+1}</div>`, iconSize:[26,26], iconAnchor:[13,13] }), zIndexOffset:1000, title:nm(r) }).on('click', () => detail(r)).addTo(courseLayer));
+}
+$('course').onclick = e => {
+  const m = e.target.closest('[data-m]');
+  if (m) { const [i, d] = m.dataset.m.split(':'); if (d === 'x') toggleFav(favs[+i]); else { const j = +i + +d; if (j >= 0 && j < favs.length) { [favs[+i], favs[j]] = [favs[j], favs[+i]]; saveFavs(); renderCourse(); } } return; }
+  if (e.target.id === 'cclear') { favs = []; saveFavs(); renderCourse(); document.querySelectorAll('[data-favbtn]').forEach(b => setFavBtn(b, +b.dataset.favbtn)); return; }
+  if (e.target.id === 'cfit' && map) { map.fitBounds(L.latLngBounds(favs.map(id => [byId(id).lat, byId(id).lng])).pad(0.15), { maxZoom:14 }); return; }
+  const n = e.target.closest('.nm'); if (n) detail(byId(+n.dataset.id));
+};
+
+// ---------- 지도 ----------
+let map, layer, courseLayer, street, sat, layerCtl, refit = true;
+const markers = {};
+if (window.L) {
+  map = L.map('map').setView([33.38, 126.55], 10);
+  street = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', { maxZoom:19, subdomains:'abc', attribution:'&copy; OpenStreetMap contributors, tiles OSM France' }).addTo(map);
+  sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, maxNativeZoom:17, attribution:'Tiles &copy; Esri' });
+  layer = L.layerGroup().addTo(map);
+  courseLayer = L.layerGroup().addTo(map);
+}
+function setLayerControl() {
+  if (!map) return;
+  if (layerCtl) map.removeControl(layerCtl);
+  layerCtl = L.control.layers({ [t('mapLayerStreet')]:street, [t('mapLayerSat')]:sat }, null, { position:'topright' }).addTo(map);
+}
+
+function snippet(r) {
+  const s = blank(r.content) ? (blank(r.abs) ? '' : r.abs) : r.content;
+  return s.length > 110 ? s.slice(0, 110) + '…' : s;
+}
+function popup(r) {
+  const el = document.createElement('div'); el.className = 'pop';
+  const e = eraBy[r.era];
+  el.innerHTML = `<h4>${esc(nm(r))}</h4><div class="t" style="color:${e.color}">${esc(eraName(e))}</div><div class="a">${esc(r.addr)}</div><div class="s">${esc(basisOf(r) || snippet(r))}</div><button>${t('popupMore')}</button>`;
+  el.querySelector('button').onclick = () => detail(r);
+  el.appendChild(document.createTextNode(' ')); el.appendChild(favBtn(r.id));
+  return el;
+}
+function updateMap(rows) {
+  if (!map) return;
+  layer.clearLayers();
+  rows.forEach(r => {
+    markers[r.id] = L.marker([r.lat, r.lng], { icon:L.divIcon({ className:'', html:`<div class="dot" style="background:${eraBy[r.era].color}"></div>`, iconSize:[16,16], iconAnchor:[8,8] }), title:nm(r) })
+      .bindPopup(() => popup(r), { maxWidth:300 }).addTo(layer);
+  });
+  if (refit && rows.length) map.fitBounds(L.latLngBounds(rows.map(r => [r.lat, r.lng])).pad(0.1), { maxZoom:14 });
+  refit = false;
+}
+function focusOnMap(id) {
+  const r = byId(id);
+  if (!map || !markers[id]) return;
+  $('map').scrollIntoView({ behavior:'smooth', block:'center' });
+  map.setView([r.lat, r.lng], 14); markers[id].openPopup();
+}
+
+// ---------- 목록 ----------
+function visible() {
+  const q = state.q.trim().toLowerCase();
+  return DATA.filter(r => (state.era === 'all' || r.era === state.era) && (!q || searchText(r).includes(q)));
+}
+function cardHtml(r) {
+  const e = eraBy[r.era], b = basisOf(r);
+  return `<article class="card" style="--c:${e.color}"><h3>${esc(nm(r))}</h3>${lang !== 'ko' ? `<div class="ko">${esc(r.name)}</div>` : ''}${blank(r.title) ? '' : `<div class="ttl">${esc(r.title)}</div>`}<div class="addr">${esc(r.addr)}</div>` +
+    (b ? `<div class="basis">${esc(b)}${r.general && lang === 'ko' ? ` <em>${t('general')}</em>` : ''}</div>` : '') +
+    `<div class="snip">${lang !== 'ko' ? `<em class="src">${t('srcLabel')}</em>` : ''}${esc(snippet(r))}</div><div class="acts"><button class="mini" data-d="${r.id}">${t('detail')}</button><button class="mini" data-map="${r.id}">${t('onMap')}</button><span data-slot="${r.id}"></span></div></article>`;
+}
+function tableHtml(rows) {
+  const val = { id:r => r.id, name:r => nm(r), era:r => eraOrder[r.era], addr:r => r.addr, title:r => r.title };
+  const k = state.sort, f = val[k];
+  const sorted = [...rows].sort((a, b) => { const x = f(a), y = f(b); return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y), lang === 'ko' ? 'ko' : lang)) * state.dir; });
+  const cols = [['fav', ''], ['name', t('colName')], ['era', t('colEra')], ['addr', t('colAddr')], ['title', t('colTitle')]];
+  return `<div class="tablewrap"><div class="cnt">${t('countOf', { n:rows.length, all:DATA.length })}</div><table><thead><tr>` +
+    cols.map(([key, label]) => `<th data-k="${key}" class="${key === k ? 'sorted' : ''}">${label}${key === k ? (state.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '</tr></thead><tbody>' +
+    sorted.map(r => { const e = eraBy[r.era]; return `<tr data-row="${r.id}"><td><span data-slot="${r.id}"></span></td><td>${esc(nm(r))}${lang !== 'ko' ? ` <small style="color:var(--muted)">${esc(r.name)}</small>` : ''}</td><td><span class="etag" style="--c:${e.color}">${esc(eraName(e))}</span></td><td class="wrap">${esc(r.addr)}</td><td class="wrap">${blank(r.title) ? '' : esc(r.title)}</td></tr>`; }).join('') +
+    '</tbody></table></div>';
+}
+function render() {
+  if (state.status !== 'ready') {
+    $('main').innerHTML = state.status === 'loading'
+      ? `<div class="empty">${t('loading')}</div>`
+      : `<div class="empty"><p>${t('loadError')}</p><p><small>${esc(state.err)}</small></p><button class="mini" id="retry">${t('retry')}</button></div>`;
+    return;
+  }
+  const rows = visible();
+  updateMap(rows);
+  document.querySelectorAll('.era-btn').forEach(b => b.classList.toggle('on', b.dataset.k === state.era));
+  $('vcards').classList.toggle('on', state.view === 'cards'); $('vtable').classList.toggle('on', state.view === 'table');
+  if (state.view === 'table') {
+    $('main').innerHTML = rows.length ? tableHtml(rows) : `<div class="empty">${t('none')}</div>`;
+    document.querySelectorAll('[data-slot]').forEach(s => s.replaceWith(favBtn(+s.dataset.slot)));
+    return;
+  }
+  let html = '';
+  ERAS.forEach(e => {
+    const rs = rows.filter(r => r.era === e.key);
+    if (!rs.length) return;
+    const limit = e.key === 'etc' ? ETC_STEP + state.more : Infinity;
+    html += `<section class="era" style="--c:${e.color}"><h2>${esc(eraName(e))}<small>${esc(eraSpan(e))} · ${t('placesN', { n:rs.length })}</small></h2><p class="intro">${esc(eraIntro(e))}</p><div class="grid">${rs.slice(0, limit).map(cardHtml).join('')}</div>` +
+      (rs.length > limit ? `<button class="mini more" id="more">${t('more', { n:rs.length - limit })}</button>` : '') + '</section>';
+  });
+  $('main').innerHTML = html || `<div class="empty">${t('none')}</div>`;
+  document.querySelectorAll('[data-slot]').forEach(s => s.replaceWith(favBtn(+s.dataset.slot)));
+}
+
+// ---------- 상세 ----------
+function translateUrl(text) {
+  const gt = LANGS.find(l => l.code === lang).gt;
+  return `https://translate.google.com/?sl=ko&tl=${gt}&op=translate&text=${encodeURIComponent(text.slice(0, 600))}`;
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+  try { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (e) { return false; }
+}
+function detail(r) {
+  const e = eraBy[r.era], b = basisOf(r);
+  const rows = [[t('era'), eraName(e) + (b ? ` — ${b}` : '')], [t('addr'), r.addr + (r.zip ? ` (${r.zip})` : '')], [t('coord'), `${r.lat}, ${r.lng}`],
+    [t('ref1'), r.title], [t('author'), r.author], [t('subject'), r.subject], [t('pubdate'), r.pubdate], [t('source'), r.source]].filter(([, v]) => !blank(v));
+  let h = `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`;
+  const full = [r.content, r.abs].filter(x => !blank(x)).join('\n\n');
+  if (lang !== 'ko') h = `<div class="origbox"><span>${t('origNote')}</span><button class="mini" id="gtbtn">${t('translate')}</button></div>` + h;
+  [['content', r.content], ['toc', r.toc], ['abs', r.abs], ['bib', r.ref]].forEach(([k, v]) => { if (!blank(v)) h += `<h3>${t(k)}${lang !== 'ko' ? ` (${t('srcLabel')})` : ''}</h3><p>${esc(v)}</p>`; });
+  h += `<h3>${t('link')}</h3><p><a href="${esc(r.url)}" target="_blank" rel="noopener">${t('linkSrc')}</a> · <a href="https://www.google.com/maps?q=${r.lat},${r.lng}" target="_blank" rel="noopener">${t('linkMap')}</a></p>`;
+  $('dtitle').textContent = nm(r);
+  $('dsub').textContent = lang === 'ko' ? eraName(e) : `${eraName(e)} · ${r.name}`;
+  $('dbody').innerHTML = h;
+  $('dbody').prepend(favBtn(r.id));
+  const gt = $('gtbtn');
+  if (gt) gt.onclick = async () => { await copyText(full); window.open(translateUrl(full), '_blank', 'noopener'); };
+  $('dlg').showModal();
+}
+
+// ---------- 언어 적용 ----------
+function applyLang() {
+  document.documentElement.lang = LANGS.find(l => l.code === lang).gt;
+  document.title = t('title');
+  $('h1').textContent = t('title');
+  $('subtitle').textContent = t('subtitle');
+  $('q').placeholder = t('search');
+  $('note').textContent = t('note');
+  $('vcards').textContent = t('viewCards'); $('vtable').textContent = t('viewTable');
+  $('mapfail').textContent = t('mapfail'); $('mapfail').hidden = !!window.L;
+  $('lang').value = lang;
+  $('eras').innerHTML = [{ key:'all', color:'#0e7c86' }, ...ERAS].map(e => {
+    const n = e.key === 'all' ? DATA.length : DATA.filter(r => r.era === e.key).length;
+    return `<button class="era-btn" data-k="${e.key}" style="--c:${e.color}">${e.key === 'all' ? t('all') : esc(eraName(e))} ${n}</button>`;
+  }).join('');
+  $('legend').innerHTML = ERAS.map(e => `<span><i style="background:${e.color}"></i>${esc(eraName(e))}</span>`).join('') + `<span><i style="background:#d6335a"></i>${t('legendCourse')}</span>`;
+  setLayerControl();
+  render(); renderCourse();
+}
+
+// ---------- 이벤트 ----------
+$('lang').innerHTML = LANGS.map(l => `<option value="${l.code}">${l.label}</option>`).join('');
+$('lang').onchange = e => { lang = e.target.value; try { localStorage.setItem('jeju-lang', lang); } catch (x) {} if ($('dlg').open) $('dlg').close(); refit = false; applyLang(); };
+$('eras').onclick = e => { const b = e.target.closest('.era-btn'); if (!b) return; state.era = b.dataset.k; state.more = 0; refit = true; render(); };
+let timer;
+$('q').addEventListener('input', e => { clearTimeout(timer); timer = setTimeout(() => { state.q = e.target.value; state.more = 0; refit = true; render(); }, 150); });
+$('main').onclick = e => {
+  const th = e.target.closest('th');
+  if (th) { if (th.dataset.k !== 'fav') { state.dir = state.sort === th.dataset.k ? -state.dir : 1; state.sort = th.dataset.k; refit = false; render(); } return; }
+  const row = e.target.closest('[data-row]');
+  if (row) { if (!e.target.closest('.fav')) detail(byId(+row.dataset.row)); return; }
+  if (e.target.id === 'more') { state.more += ETC_STEP; refit = false; render(); return; }
+  const d = e.target.closest('[data-d]'); if (d) { detail(byId(+d.dataset.d)); return; }
+  const m = e.target.closest('[data-map]'); if (m) focusOnMap(+m.dataset.map);
+};
+document.querySelector('.views').onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; state.view = b.dataset.v; refit = false; render(); };
+$('dclose').onclick = () => $('dlg').close();
+$('dlg').addEventListener('click', e => { if (e.target === $('dlg')) $('dlg').close(); });
+async function boot() {
+  state.status = 'loading'; state.err = ''; applyLang();
+  try {
+    const res = await fetch(API_URL, { headers:{ Accept:'application/json' } });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error === 'missing_env' ? `missing_env: ${(body.missing || []).join(', ')}` : `${res.status} ${body.error || ''} ${body.detail || ''}`.trim());
+    DATA = prepare(body.items || []);
+    favs = favs.filter(id => DATA.some(r => r.id === id));
+    refit = true; state.status = 'ready';
+  } catch (e) {
+    state.status = 'error'; state.err = e.message;
+  }
+  applyLang();
+}
+$('main').addEventListener('click', e => { if (e.target.id === 'retry') boot(); });
+boot();
+</script>
+</body>
+</html>
